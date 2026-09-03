@@ -1,397 +1,118 @@
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local lp = Players.LocalPlayer
-local char = lp.Character or lp.CharacterAdded:Wait()
-local hrp = char:WaitForChild("HumanoidRootPart")
-local hum = char:WaitForChild("Humanoid")
 
--- CONFIG
+local lp = Players.LocalPlayer
+
 local EAT_DURATION = 6
 local STORE_POSITION = Vector3.new(55.5, 20.75, 282.5)
+
 local currentWaypoint = 1
 local isEating = false
 
 local RACE_WAYPOINTS = {
-	Vector3.new(-120.565, 2.999, -133.247),
-	Vector3.new(-113.463, 3.199, -113.604),
-	Vector3.new(-118.984, 2.095, -102.000),
-	Vector3.new(-119.759, 2.370, -102.009),
-	Vector3.new(-122.222, 2.358, -101.990),
-	Vector3.new(-126.454, 2.387, -101.983),
-	Vector3.new(-133.724, 2.380, -101.957),
-	Vector3.new(-141.030, 2.400, -101.963),
-	Vector3.new(-150.491, 2.392, -101.973),
-	Vector3.new(-162.672, 2.387, -101.977),
-	Vector3.new(-174.469, 2.388, -101.884),
-	Vector3.new(-188.598, 2.379, -101.770),
-	Vector3.new(-204.985, 2.384, -101.644),
-	Vector3.new(-221.672, 2.377, -101.518),
-	Vector3.new(-240.902, 2.370, -101.366),
-	Vector3.new(-256.759, 2.372, -101.240),
-	Vector3.new(-287.251, 2.369, -102.363),
-	Vector3.new(-303.877, 2.377, -103.849),
-	Vector3.new(-325.456, 2.404, -105.845),
-	Vector3.new(-341.350, 2.415, -107.325),
-	Vector3.new(-362.956, 2.392, -109.464),
-	Vector3.new(-377.326, 2.409, -110.884),
-	Vector3.new(-400.756, 2.365, -113.571),
-	Vector3.new(-424.128, 2.428, -122.076),
-	Vector3.new(-435.852, 2.406, -132.196),
-	Vector3.new(-442.537, 2.409, -144.954),
-	Vector3.new(-445.229, 2.378, -159.945),
-	Vector3.new(-446.608, 2.389, -173.387),
-	Vector3.new(-448.445, 2.389, -208.436),
-	Vector3.new(-448.858, 2.370, -225.230),
-	Vector3.new(-449.169, 2.378, -238.388),
-	Vector3.new(-449.616, 2.396, -255.036),
-	Vector3.new(-450.193, 2.431, -274.012),
-	Vector3.new(-450.376, 2.342, -310.115),
-	Vector3.new(-449.199, 2.399, -325.132),
-	Vector3.new(-447.615, 2.377, -344.169),
-	Vector3.new(-446.947, 2.523, -362.120),
-	Vector3.new(-448.281, 2.376, -385.363),
-	Vector3.new(-448.358, 2.364, -403.611),
-	Vector3.new(-447.180, 2.444, -432.768),
-	Vector3.new(-448.331, 2.447, -450.066),
-	Vector3.new(-450.471, 2.393, -472.063),
-	Vector3.new(-453.119, 2.355, -504.636),
-	Vector3.new(-453.284, 2.375, -520.884),
-	Vector3.new(-453.366, 2.424, -537.084),
-	Vector3.new(-453.442, 2.423, -557.688),
-	Vector3.new(-452.614, 2.334, -577.156),
-	Vector3.new(-450.674, 2.437, -590.603),
-	Vector3.new(-448.422, 2.402, -605.186),
-	Vector3.new(-445.559, 2.351, -623.110),
-	Vector3.new(-441.044, 2.438, -639.053),
-	Vector3.new(-433.049, 2.314, -656.500),
-	Vector3.new(-422.571, 2.400, -669.453),
-	Vector3.new(-396.799, 2.353, -683.278),
-	Vector3.new(-376.125, 2.469, -685.059),
-	Vector3.new(-356.690, 2.380, -685.513),
-	Vector3.new(-339.921, 2.427, -685.830),
-	Vector3.new(-319.755, 2.460, -686.121),
-	Vector3.new(-297.796, 2.469, -686.295),
-	Vector3.new(-281.847, 2.606, -686.400),
-	Vector3.new(-266.006, 2.495, -686.492),
-	Vector3.new(-237.698, 2.482, -681.456),
-	Vector3.new(-219.032, 2.469, -674.575),
-	Vector3.new(-203.720, 2.411, -668.731),
-	Vector3.new(-177.840, 2.602, -670.489),
-	Vector3.new(-170.373, 2.512, -677.687),
-	Vector3.new(-164.999, 2.399, -686.765),
-	Vector3.new(-157.315, 2.354, -700.455),
-	Vector3.new(-137.838, 2.399, -717.579),
-	Vector3.new(-126.934, 2.429, -719.717),
-	Vector3.new(-113.406, 2.365, -721.308),
-	Vector3.new(-68.420, 7.870, -725.714),
-	Vector3.new(-54.705, 13.323, -726.424),
-	Vector3.new(-42.249, 18.139, -727.049),
-	Vector3.new(-18.427, 21.604, -728.362),
-	Vector3.new(-6.003, 19.500, -729.018),
-	Vector3.new(13.114, 22.287, -730.108),
-	Vector3.new(35.201, 22.322, -730.750),
-	Vector3.new(48.972, 22.336, -730.047),
-	Vector3.new(63.770, 22.450, -728.604),
-	Vector3.new(86.540, 22.437, -726.781),
-	Vector3.new(115.170, 22.422, -726.621),
-	Vector3.new(131.642, 22.384, -726.586),
-	Vector3.new(148.411, 22.385, -726.549),
-	Vector3.new(168.416, 22.456, -726.494),
-	Vector3.new(181.914, 22.368, -726.457),
-	Vector3.new(203.438, 22.400, -726.399),
-	Vector3.new(241.163, 22.392, -726.202),
-	Vector3.new(257.460, 22.445, -723.483),
-	Vector3.new(277.491, 22.379, -713.310),
-	Vector3.new(290.480, 22.394, -698.894),
-	Vector3.new(295.287, 22.411, -685.962),
-	Vector3.new(295.300, 22.401, -675.898),
-	Vector3.new(293.535, 22.401, -670.265),
-	Vector3.new(285.042, 22.368, -658.709),
-	Vector3.new(272.036, 22.354, -645.936),
-	Vector3.new(252.682, 27.062, -631.124),
-	Vector3.new(228.561, 33.854, -615.870),
-	Vector3.new(217.922, 36.835, -610.598),
-	Vector3.new(189.246, 44.157, -595.581),
-	Vector3.new(176.404, 43.758, -588.039),
-	Vector3.new(165.985, 42.053, -581.519),
-	Vector3.new(155.004, 42.710, -574.977),
-	Vector3.new(145.521, 42.422, -569.337),
-	Vector3.new(124.861, 42.547, -556.050),
-	Vector3.new(117.361, 42.445, -547.658),
-	Vector3.new(113.009, 42.603, -538.956),
-	Vector3.new(112.509, 42.595, -530.196),
-	Vector3.new(116.552, 42.509, -520.465),
-	Vector3.new(125.284, 42.445, -508.801),
-	Vector3.new(129.842, 42.490, -499.878),
-	Vector3.new(133.879, 42.444, -491.951),
-	Vector3.new(138.702, 42.452, -482.254),
-	Vector3.new(143.780, 42.938, -471.641),
-	Vector3.new(152.003, 46.166, -454.659),
-	Vector3.new(157.410, 47.864, -443.222),
-	Vector3.new(163.902, 50.100, -429.613),
-	Vector3.new(171.224, 52.691, -414.459),
-	Vector3.new(180.962, 55.899, -394.439),
-	Vector3.new(189.973, 58.877, -377.414),
-	Vector3.new(200.768, 61.785, -360.389),
-	Vector3.new(208.752, 63.448, -348.132),
-	Vector3.new(218.579, 62.346, -332.931),
-	Vector3.new(227.831, 62.437, -318.747),
-	Vector3.new(234.822, 62.494, -307.932),
-	Vector3.new(243.379, 62.444, -294.911),
-	Vector3.new(259.139, 62.393, -278.522),
-	Vector3.new(271.894, 62.490, -268.257),
-	Vector3.new(287.342, 62.569, -260.545),
-	Vector3.new(302.645, 62.553, -258.325),
-	Vector3.new(318.134, 62.492, -260.869),
-	Vector3.new(332.268, 62.381, -265.522),
-	Vector3.new(347.051, 62.375, -270.518),
-	Vector3.new(366.259, 62.540, -277.859),
-	Vector3.new(384.298, 62.403, -289.241),
-	Vector3.new(408.711, 62.407, -296.154),
-	Vector3.new(422.908, 62.385, -294.761),
-	Vector3.new(434.570, 62.373, -292.715),
-	Vector3.new(453.376, 62.368, -289.299),
-	Vector3.new(483.104, 62.349, -279.452),
-	Vector3.new(503.300, 62.376, -267.998),
-	Vector3.new(518.494, 62.412, -255.794),
-	Vector3.new(527.676, 62.391, -243.804),
-	Vector3.new(538.851, 62.354, -224.668),
-	Vector3.new(546.059, 62.224, -212.052),
-	Vector3.new(556.271, 58.571, -194.166),
-	Vector3.new(565.110, 52.104, -178.440),
-	Vector3.new(574.015, 48.039, -162.011),
-	Vector3.new(583.042, 43.550, -146.308),
-	Vector3.new(590.217, 42.369, -133.798),
-	Vector3.new(601.021, 42.530, -115.289),
-	Vector3.new(610.693, 42.433, -103.960),
-	Vector3.new(621.527, 42.389, -93.014),
-	Vector3.new(635.865, 42.494, -79.444),
-	Vector3.new(649.061, 42.574, -70.834),
-	Vector3.new(667.167, 42.503, -63.988),
-	Vector3.new(683.500, 42.526, -61.818),
-	Vector3.new(700.001, 42.475, -62.833),
-	Vector3.new(717.945, 42.509, -67.313),
-	Vector3.new(732.002, 42.537, -74.361),
-	Vector3.new(743.552, 42.537, -83.918),
-	Vector3.new(754.135, 42.534, -98.493),
-	Vector3.new(760.662, 42.459, -109.544),
-	Vector3.new(774.718, 42.445, -132.294),
-	Vector3.new(785.812, 42.422, -149.890),
-	Vector3.new(793.489, 42.364, -161.878),
-	Vector3.new(805.277, 42.429, -180.325),
-	Vector3.new(813.920, 42.385, -193.783),
-	Vector3.new(828.454, 42.425, -216.176),
-	Vector3.new(838.152, 42.382, -231.074),
-	Vector3.new(846.625, 42.550, -247.159),
-	Vector3.new(850.706, 42.580, -261.706),
-	Vector3.new(851.349, 42.406, -285.674),
-	Vector3.new(850.461, 42.395, -304.674),
-	Vector3.new(847.078, 42.584, -324.575),
-	Vector3.new(841.117, 42.531, -339.701),
-	Vector3.new(830.264, 42.579, -355.244),
-	Vector3.new(812.890, 42.602, -368.845),
-	Vector3.new(793.239, 42.500, -375.021),
-	Vector3.new(765.745, 42.355, -384.899),
-	Vector3.new(753.930, 42.345, -391.777),
-	Vector3.new(740.207, 42.403, -400.331),
-	Vector3.new(723.258, 42.349, -411.168),
-	Vector3.new(709.638, 42.367, -422.123),
-	Vector3.new(697.417, 42.423, -437.995),
-	Vector3.new(683.638, 39.358, -465.672),
-	Vector3.new(677.147, 34.259, -479.370),
-	Vector3.new(671.686, 27.655, -491.221),
-	Vector3.new(669.120, 25.389, -495.658),
-	Vector3.new(666.431, 24.139, -500.006),
-	Vector3.new(663.000, 22.199, -505.578),
-	Vector3.new(659.042, 22.510, -511.941),
-	Vector3.new(653.096, 22.478, -521.788),
-	Vector3.new(646.733, 22.386, -535.928),
-	Vector3.new(645.857, 22.433, -547.145),
-	Vector3.new(646.227, 22.360, -561.769),
-	Vector3.new(647.779, 22.412, -575.724),
-	Vector3.new(650.029, 22.408, -586.892),
-	Vector3.new(652.879, 22.358, -601.218),
-	Vector3.new(655.851, 22.429, -622.016),
-	Vector3.new(660.561, 22.392, -630.524),
-	Vector3.new(667.278, 22.421, -644.106),
-	Vector3.new(669.618, 22.547, -655.979),
-	Vector3.new(669.298, 22.288, -666.402),
-	Vector3.new(668.782, 19.963, -678.713),
-	Vector3.new(668.300, 15.279, -690.975),
-	Vector3.new(667.634, 11.794, -706.906),
-	Vector3.new(666.932, 6.901, -725.028),
-	Vector3.new(666.544, 4.447, -734.434),
-	Vector3.new(665.717, 2.354, -751.291),
-	Vector3.new(664.318, 2.728, -760.878),
-	Vector3.new(659.725, 2.526, -773.142),
-	Vector3.new(652.452, 2.511, -781.796),
-	Vector3.new(639.628, 2.470, -790.262),
-	Vector3.new(629.112, 2.438, -794.371),
-	Vector3.new(615.688, 2.470, -798.508),
-	Vector3.new(600.421, 2.439, -800.018),
-	Vector3.new(586.498, 2.366, -800.876),
-	Vector3.new(568.863, 2.465, -801.653),
-	Vector3.new(552.020, 2.590, -799.112),
-	Vector3.new(538.866, 2.466, -793.370),
-	Vector3.new(523.306, 2.407, -785.065),
-	Vector3.new(505.192, 2.535, -774.886),
-	Vector3.new(489.251, 2.566, -760.792),
-	Vector3.new(478.513, 2.429, -743.153),
-	Vector3.new(468.418, 2.489, -730.691),
-	Vector3.new(459.776, 2.404, -724.494),
-	Vector3.new(452.758, 2.397, -721.423),
-	Vector3.new(442.541, 2.396, -719.638),
-	Vector3.new(431.795, 2.394, -721.448),
-	Vector3.new(422.378, 2.384, -726.265),
-	Vector3.new(415.081, 2.389, -731.130),
-	Vector3.new(403.913, 2.386, -738.321),
-	Vector3.new(392.628, 2.390, -745.648),
-	Vector3.new(376.709, 2.376, -756.128),
-	Vector3.new(339.786, 2.338, -776.588),
-	Vector3.new(326.850, 2.389, -785.422),
-	Vector3.new(306.667, 2.386, -799.645),
-	Vector3.new(288.411, 2.449, -811.173),
-	Vector3.new(270.899, 2.404, -821.648),
-	Vector3.new(255.790, 2.362, -830.548),
-	Vector3.new(239.590, 2.383, -840.120),
-	Vector3.new(220.924, 2.371, -851.385),
-	Vector3.new(200.465, 2.355, -863.892),
-	Vector3.new(177.225, 2.378, -878.366),
-	Vector3.new(156.676, 2.542, -889.658),
-	Vector3.new(136.275, 2.531, -896.087),
-	Vector3.new(114.830, 2.369, -900.134),
-	Vector3.new(91.196, 2.463, -903.016),
-	Vector3.new(63.940, 2.371, -904.425),
-	Vector3.new(40.182, 2.360, -905.578),
-	Vector3.new(12.444, 2.423, -906.768),
-	Vector3.new(-23.681, 2.371, -904.558),
-	Vector3.new(-43.654, 2.331, -904.246),
-	Vector3.new(-63.572, 2.404, -905.327),
-	Vector3.new(-92.278, 2.509, -906.547),
-	Vector3.new(-116.443, 2.510, -902.517),
-	Vector3.new(-137.634, 2.398, -896.649),
-	Vector3.new(-158.863, 2.556, -887.944),
-	Vector3.new(-178.485, 2.635, -876.835),
-	Vector3.new(-199.291, 2.535, -857.967),
-	Vector3.new(-213.969, 2.428, -837.961),
-	Vector3.new(-224.416, 2.363, -821.539),
-	Vector3.new(-236.295, 2.367, -803.092),
-	Vector3.new(-248.366, 2.364, -784.680),
-	Vector3.new(-262.343, 2.418, -763.281),
-	Vector3.new(-278.474, 2.557, -736.467),
-	Vector3.new(-284.124, 2.546, -716.513),
-	Vector3.new(-285.433, 2.638, -675.335),
-	Vector3.new(-280.949, 2.506, -653.982),
-	Vector3.new(-266.645, 2.594, -631.816),
-	Vector3.new(-246.580, 2.506, -614.944),
-	Vector3.new(-235.698, 2.462, -608.767),
-	Vector3.new(-222.581, 2.384, -601.430),
-	Vector3.new(-213.029, 2.393, -593.737),
-	Vector3.new(-205.911, 2.373, -583.115),
-	Vector3.new(-201.657, 2.379, -569.971),
-	Vector3.new(-199.987, 2.413, -553.388),
-	Vector3.new(-201.084, 2.433, -535.713),
-	Vector3.new(-205.532, 2.381, -521.493),
-	Vector3.new(-210.729, 2.776, -509.076),
-	Vector3.new(-222.846, 2.921, -488.142),
-	Vector3.new(-254.007, 3.306, -465.980),
-	Vector3.new(-264.262, 2.761, -458.800),
-	Vector3.new(-270.830, 2.314, -448.392),
-	Vector3.new(-279.444, 2.523, -424.644),
-	Vector3.new(-282.915, 2.561, -406.991),
-	Vector3.new(-280.890, 2.548, -395.999),
-	Vector3.new(-274.801, 2.398, -382.419),
-	Vector3.new(-264.773, 2.623, -369.142),
-	Vector3.new(-254.566, 2.593, -363.225),
-	Vector3.new(-243.853, 2.520, -362.473),
-	Vector3.new(-223.741, 2.376, -366.254),
-	Vector3.new(-204.036, 2.526, -367.822),
-	Vector3.new(-193.464, 2.443, -371.795),
-	Vector3.new(-181.883, 2.389, -376.355),
-	Vector3.new(-161.584, 2.241, -384.336),
-	Vector3.new(-130.248, 2.462, -394.429),
-	Vector3.new(-116.584, 2.582, -399.581),
-	Vector3.new(-98.208, 2.326, -408.440),
-	Vector3.new(-34.193, 2.440, -421.538),
-	Vector3.new(-17.787, 2.425, -416.407),
-	Vector3.new(-5.943, 2.383, -407.044),
-	Vector3.new(-0.773, 2.412, -396.624),
-	Vector3.new(2.007, 2.378, -378.244),
-	Vector3.new(3.005, 2.393, -368.069),
-	Vector3.new(3.956, 2.384, -356.986),
-	Vector3.new(5.288, 2.381, -341.059),
-	Vector3.new(7.025, 2.338, -314.586),
-	Vector3.new(6.077, 2.409, -300.029),
-	Vector3.new(4.741, 2.373, -284.141),
-	Vector3.new(3.049, 2.454, -263.932),
-	Vector3.new(2.839, 2.384, -244.170),
-	Vector3.new(3.117, 2.385, -225.228),
-	Vector3.new(3.600, 2.399, -196.095),
-	Vector3.new(-1.442, 2.564, -156.498),
-	Vector3.new(-2.703, 2.453, -135.660),
-	Vector3.new(-4.980, 2.406, -128.489),
-	Vector3.new(-11.147, 2.413, -117.211),
-	Vector3.new(-20.728, 2.422, -108.699),
-	Vector3.new(-31.074, 2.351, -104.556),
-	Vector3.new(-41.077, 2.419, -102.710),
-	Vector3.new(-57.487, 2.383, -101.727),
-	Vector3.new(-70.756, 2.473, -104.779),
-	Vector3.new(-80.569, 2.511, -105.948),
-	Vector3.new(-90.757, 2.439, -105.593),
+    -- Keep your existing waypoint Vector3 values here.
 }
 
+local function getCharacter()
+    local char = lp.Character or lp.CharacterAdded:Wait()
+
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local hum = char:WaitForChild("Humanoid")
+
+    return char, hrp, hum
+end
+
 local function checkHunger()
-    for _, gui in ipairs(lp.PlayerGui:GetDescendants()) do
-        if gui:IsA("TextLabel") and gui.Text:upper():find("YOU ARE HUNGRY") then
-            return true
-        end
+    local playerGui = lp:FindFirstChild("PlayerGui")
+    if not playerGui then
+        return false
     end
-    return false
-end
 
-local function moveTo(pos)
-    hum:MoveTo(pos)
-    hum.MoveToFinished:Wait()
-end
+    for _, gui in ipairs(playerGui:GetDescendants()) do
+        if gui:IsA("TextLabel") then
+            local text = gui.Text
 
-local function getNearestFoodSeat()
-    local names = {"1", "2", "3"}
-    local nearest, nearestDist = nil, math.huge
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("Seat") and table.find(names, v.Name) then
-            local d = (hrp.Position - v.Position).Magnitude
-            if d < nearestDist then
-                nearest = v
-                nearestDist = d
+            if typeof(text) == "string"
+                and text:upper():find("YOU ARE HUNGRY", 1, true) then
+                return true
             end
         end
     end
+
+    return false
+end
+
+local function moveTo(hum, position)
+    hum:MoveTo(position)
+
+    local reached = hum.MoveToFinished:Wait()
+
+    return reached
+end
+
+local function getNearestFoodSeat(hrp)
+    local names = {
+        ["1"] = true,
+        ["2"] = true,
+        ["3"] = true
+    }
+
+    local nearest = nil
+    local nearestDist = math.huge
+
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("Seat") and names[v.Name] then
+            local distance = (hrp.Position - v.Position).Magnitude
+
+            if distance < nearestDist then
+                nearest = v
+                nearestDist = distance
+            end
+        end
+    end
+
     return nearest
 end
 
-local function goEat()
+local function goEat(char, hrp, hum)
+    if isEating then
+        return
+    end
+
     isEating = true
-    moveTo(STORE_POSITION)
-    local seat = getNearestFoodSeat()
-    if seat then
+
+    moveTo(hum, STORE_POSITION)
+
+    local seat = getNearestFoodSeat(hrp)
+
+    if seat and seat.Parent then
         seat:Sit(hum)
         task.wait(EAT_DURATION)
-        hum.Sit = false
+
+        if hum and hum.Parent then
+            hum.Sit = false
+        end
     end
+
     isEating = false
 end
 
-RunService.Heartbeat:Connect(function()
-    char = lp.Character
-    if not char then return end
-    hrp = char:FindFirstChild("HumanoidRootPart")
-    hum = char:FindFirstChild("Humanoid")
-    if not hrp or not hum or isEating then return end
+while true do
+    local char, hrp, hum = getCharacter()
 
     if checkHunger() then
-        goEat()
+        goEat(char, hrp, hum)
     else
-        moveTo(RACE_WAYPOINTS[currentWaypoint])
-        currentWaypoint = currentWaypoint % #RACE_WAYPOINTS + 1
+        local waypoint = RACE_WAYPOINTS[currentWaypoint]
+
+        if waypoint then
+            moveTo(hum, waypoint)
+
+            currentWaypoint =
+                (currentWaypoint % #RACE_WAYPOINTS) + 1
+        else
+            currentWaypoint = 1
+        end
     end
-end)
+
+    task.wait(0.1)
+end
