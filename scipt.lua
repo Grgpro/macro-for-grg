@@ -7,11 +7,17 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- SETTINGS
 --==================================================
 
+local START_WAIT = 20
 local EAT_DURATION = 5
-local MOVE_TIMEOUT = 8
-local WAYPOINT_REACH_DISTANCE = 5
 
--- Your food/store location
+local MOVE_TIMEOUT = 8
+local REACH_DISTANCE = 5
+local CHECK_INTERVAL = 0.1
+
+--==================================================
+-- FOOD LOCATION
+--==================================================
+
 local STORE_POSITION = Vector3.new(
     -120.56571197509766,
     2.9999887943267822,
@@ -19,17 +25,20 @@ local STORE_POSITION = Vector3.new(
 )
 
 --==================================================
--- OPTIMIZED ONE-LAP WAYPOINTS
+-- RACE ROUTE
 --==================================================
--- These are intentionally NOT every recorded position.
--- They are major points along the route.
+-- First point = race starting gate.
+-- The script waits 20 seconds there before starting.
+
+local START_POSITION = Vector3.new(
+    -113.46387481689453,
+    3.1999995708465576,
+    -113.60486602783203
+)
 
 local RACE_WAYPOINTS = {
 
-    Vector3.new(-113.4639, 3.2, -113.6049),
-
     Vector3.new(-118.9842, 2.0954, -102.0009),
-    Vector3.new(-118.9815, 2.5216, -101.9995),
     Vector3.new(-118.9426, 2.3510, -101.9871),
 
     Vector3.new(-90.7577, 2.4390, -105.5932),
@@ -47,7 +56,6 @@ local RACE_WAYPOINTS = {
 
     Vector3.new(-223.7415, 2.3768, -366.2542),
     Vector3.new(-280.8906, 2.5485, -396.0000),
-    Vector3.new(-282.9152, 2.5613, -406.9911),
     Vector3.new(-270.8307, 2.3142, -448.3929),
 
     Vector3.new(-254.0071, 3.3066, -465.9801),
@@ -68,28 +76,28 @@ local RACE_WAYPOINTS = {
 
     Vector3.new(-303.8779, 2.3773, -103.8498),
     Vector3.new(-256.7598, 2.3726, -101.2406),
-
     Vector3.new(-174.4693, 2.3887, -101.8843),
     Vector3.new(-126.4541, 2.3878, -101.9831),
 
-    Vector3.new(-116.7533, 2.4058, -111.5681),
-
-    Vector3.new(-113.4639, 3.2, -113.6049)
+    Vector3.new(-116.7533, 2.4058, -111.5681)
 }
 
 --==================================================
 -- STATE
 --==================================================
 
-local currentWaypoint = 1
-local isEating = false
+local eating = false
+local raceStarted = false
+local waypointIndex = 1
 
 --==================================================
 -- CHARACTER
 --==================================================
 
 local function getCharacter()
-    local character = player.Character or player.CharacterAdded:Wait()
+
+    local character = player.Character
+        or player.CharacterAdded:Wait()
 
     local humanoid = character:WaitForChild("Humanoid")
     local root = character:WaitForChild("HumanoidRootPart")
@@ -98,12 +106,15 @@ local function getCharacter()
 end
 
 --==================================================
--- HUNGER CHECK
+-- HUNGER
 --==================================================
 
-local function checkHunger()
+local function isHungry()
+
     for _, gui in ipairs(playerGui:GetDescendants()) do
+
         if gui:IsA("TextLabel") then
+
             local text = tostring(gui.Text):upper()
 
             if text:find("YOU ARE HUNGRY", 1, true) then
@@ -116,32 +127,36 @@ local function checkHunger()
 end
 
 --==================================================
--- FAST MOVEMENT
+-- MOVEMENT
 --==================================================
 
 local function moveTo(humanoid, root, position)
 
-    if not humanoid or humanoid.Health <= 0 then
+    if not humanoid
+        or not root
+        or humanoid.Health <= 0 then
+
         return false
     end
 
     humanoid:MoveTo(position)
 
-    local startTime = os.clock()
+    local started = os.clock()
 
     while humanoid.Health > 0 do
 
-        local distance = (root.Position - position).Magnitude
+        local distance =
+            (root.Position - position).Magnitude
 
-        if distance <= WAYPOINT_REACH_DISTANCE then
+        if distance <= REACH_DISTANCE then
             return true
         end
 
-        if os.clock() - startTime >= MOVE_TIMEOUT then
+        if os.clock() - started >= MOVE_TIMEOUT then
             return false
         end
 
-        task.wait(0.05)
+        task.wait(CHECK_INTERVAL)
     end
 
     return false
@@ -151,10 +166,10 @@ end
 -- FIND FOOD SEAT
 --==================================================
 
-local function getNearestFoodSeat(root)
+local function findFoodSeat(root)
 
-    local nearestSeat = nil
-    local nearestDistance = math.huge
+    local closest = nil
+    local closestDistance = math.huge
 
     for _, object in ipairs(workspace:GetDescendants()) do
 
@@ -169,28 +184,29 @@ local function getNearestFoodSeat(root)
                 local distance =
                     (root.Position - object.Position).Magnitude
 
-                if distance < nearestDistance then
-                    nearestDistance = distance
-                    nearestSeat = object
+                if distance < closestDistance then
+
+                    closest = object
+                    closestDistance = distance
                 end
             end
         end
     end
 
-    return nearestSeat
+    return closest
 end
 
 --==================================================
 -- EAT
 --==================================================
 
-local function goEat(root, humanoid)
+local function eat(root, humanoid)
 
-    if isEating then
+    if eating then
         return
     end
 
-    isEating = true
+    eating = true
 
     -- Go to food area
     moveTo(
@@ -199,9 +215,9 @@ local function goEat(root, humanoid)
         STORE_POSITION
     )
 
-    task.wait(0.3)
+    task.wait(0.25)
 
-    local seat = getNearestFoodSeat(root)
+    local seat = findFoodSeat(root)
 
     if seat then
 
@@ -216,53 +232,138 @@ local function goEat(root, humanoid)
         task.wait(0.5)
     end
 
-    isEating = false
+    eating = false
 end
 
 --==================================================
--- MAIN LOOP
+-- WAIT AT START
+--==================================================
+
+local function waitForRaceStart(root, humanoid)
+
+    raceStarted = false
+
+    -- Get to starting gate
+    moveTo(
+        humanoid,
+        root,
+        START_POSITION
+    )
+
+    -- Wait for race
+    local remaining = START_WAIT
+
+    while remaining > 0 do
+
+        -- Hunger still takes priority
+        if isHungry() then
+            eat(root, humanoid)
+
+            -- Return to starting gate
+            moveTo(
+                humanoid,
+                root,
+                START_POSITION
+            )
+        end
+
+        task.wait(1)
+        remaining -= 1
+    end
+
+    raceStarted = true
+end
+
+--==================================================
+-- RUN ONE LAP
+--==================================================
+
+local function runLap(root, humanoid)
+
+    waypointIndex = 1
+
+    while waypointIndex <= #RACE_WAYPOINTS do
+
+        -- Hunger interruption
+        if isHungry() then
+
+            eat(root, humanoid)
+
+            -- Resume by returning to the current waypoint
+            if waypointIndex <= #RACE_WAYPOINTS then
+
+                moveTo(
+                    humanoid,
+                    root,
+                    RACE_WAYPOINTS[waypointIndex]
+                )
+            end
+        end
+
+        local waypoint =
+            RACE_WAYPOINTS[waypointIndex]
+
+        moveTo(
+            humanoid,
+            root,
+            waypoint
+        )
+
+        waypointIndex += 1
+
+        task.wait(0.05)
+    end
+end
+
+--==================================================
+-- MAIN
 --==================================================
 
 while true do
 
-    local character, root, humanoid = getCharacter()
+    local character, root, humanoid =
+        getCharacter()
 
     if humanoid.Health <= 0 then
-        task.wait(1)
-        continue
-    end
 
-    -- Hunger takes priority
-    if checkHunger() then
-
-        goEat(root, humanoid)
+        task.wait(2)
 
     else
 
-        local waypoint =
-            RACE_WAYPOINTS[currentWaypoint]
+        --==========================================
+        -- GO TO START + WAIT 20 SECONDS
+        --==========================================
 
-        if waypoint then
+        waitForRaceStart(
+            root,
+            humanoid
+        )
 
-            local reached =
-                moveTo(
-                    humanoid,
-                    root,
-                    waypoint
-                )
+        --==========================================
+        -- RUN ONE LAP
+        --==========================================
 
-            -- Advance even if MoveTo timed out.
-            -- This prevents getting stuck on one point.
-            currentWaypoint =
-                (currentWaypoint % #RACE_WAYPOINTS) + 1
+        if raceStarted then
 
-            task.wait(0.05)
-
-        else
-
-            currentWaypoint = 1
+            runLap(
+                root,
+                humanoid
+            )
         end
-    end
 
-    task.wait(0.05)
+        --==========================================
+        -- LAP FINISHED
+        --==========================================
+
+        raceStarted = false
+
+        -- Return to starting gate
+        moveTo(
+            humanoid,
+            root,
+            START_POSITION
+        )
+
+        task.wait(0.5)
+    end
 end
